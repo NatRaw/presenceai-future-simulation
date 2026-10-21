@@ -78,8 +78,8 @@ function tradeOff(c) {
     main = { prio: 'You prioritised human control.',
              sacr: 'The system remains less administratively efficient, and the roll-out is delayed.' };
   }
-  const along = c.s2 === 'C' && c.s1 !== 'A'
-    ? 'Along the way you let an AI hint (“likely not present”) shape Milan’s case before any human check.'
+  const along = c.s2 === 'C'
+    ? `Along the way you let an AI hint (“likely not present”) shape the cases of ${listNames(openAtS2(c))} before any human check.`
     : (c.s1 === 'A' || c.s2 === 'A')
       ? 'Along the way you spent teaching time on reviews during the lesson.'
       : '';
@@ -117,7 +117,7 @@ const STEPS = [
     kicker: 'Incident · 08:59',
     title: 'Milan can’t be recognised',
     situation: () => `
-      <p><strong>Milan</strong> walks in wearing a hood and new glasses. PresenceAI only reaches a <strong>41% match</strong>.</p>
+      <p><strong>Milan</strong> walks through the doorway with his hood up and new glasses, at a poor angle to the camera in changing light. PresenceAI detects him but only reaches a <strong>41% match</strong>.</p>
       <p>His status: <span class="status uncertain">Uncertain</span>${REVIEW_BADGE}</p>
       <p>The lesson starts at 09:00. Three students are already at your desk with questions about the assignment.</p>`,
     question: 'What do you do?',
@@ -150,75 +150,71 @@ const STEPS = [
   },
 
   /* ---------------- STAGE 2 ---------------- */
-  /* Pressure comes from ordinary classroom workload, not from more recognition failures:
-     Milan is the only uncertain recognition; everyone else is recognised automatically. */
+  /* A separate operational issue builds a small review backlog: camera 1 recalibrated briefly,
+     and Sara and Daan entered during that period. Open reviews: 2 (Milan verified) or 3. */
   {
     id: 's2', type: 'stage', stageNo: 2, aside: 'roster',
     progress: 'Stage 2 of 5 · Classroom pressure', tlTime: '09:24', tlName: 'Pressure', clock: '09:24',
     kicker: 'Classroom pressure · 09:24',
     title: 'The lesson demands your attention',
-    situation: (c) => milanOpenAfterS1(c) ? `
-        <p>You’re 24 minutes into the lesson and helping a group with their prototype. <strong>Milan</strong>’s registration is still waiting for review.</p>
-        <p>Another student asks for help, and the review notification remains in the queue.</p>
-        <div class="callout">Your dashboard shows <b>1 open review</b>. Everyone else was recognised automatically, including two latecomers.</div>` : `
+    situation: (c) => {
+      const open = openAtS2(c);
+      return `
         <p>You’re 24 minutes into the lesson and helping a group with their prototype. Another student asks for help, then another.</p>
-        <div class="callout">Your dashboard shows <b>no open reviews</b>: you verified Milan at the start. Everyone else was recognised automatically.</div>`,
+        <span class="sim-label">Simulated scenario data · 2045</span>
+        <p>Camera 1 at the classroom doorway has just completed a short maintenance/recalibration cycle and is temporarily running with reduced recognition confidence. <strong>Sara</strong> and <strong>Daan</strong> came in during that window: their entries were processed, but PresenceAI could not verify them with enough confidence. Both are marked <span class="status uncertain">Uncertain</span>${REVIEW_BADGE}</p>
+        <div class="callout">Your dashboard shows <b>${open.length} open reviews</b>: ${milanOpenAfterS1(c)
+          ? 'Milan (still waiting since 08:59), Sara and Daan.'
+          : 'Sara and Daan. You verified Milan at the start.'}</div>`;
+    },
     question: 'How do you divide your attention?',
     reflection: 'When is human control meaningful if it cannot be used in time?',
-    toasts: (c) => milanOpenAfterS1(c)
-      ? [{ tone: 'uncertain', title: 'Reminder: 1 registration still needs review', text: 'Milan de Vries · match 41%' }]
-      : [],
+    toasts: (c) => [
+      { tone: 'uncertain', title: '2 new registrations require review', text: 'Sara Kuipers · Daan Bakker · camera 1 low confidence' },
+      ...(milanOpenAfterS1(c) ? [{ tone: 'uncertain', title: 'Reminder: Milan still needs review', text: 'Milan de Vries · match 41%' }] : []),
+    ],
     choices: [
       {
-        key: 'A', label: 'Pause and check the dashboard', detail: 'Leave the group for a moment and open the review queue.',
-        consequence: (c) => milanOpenAfterS1(c) ? {
-          title: 'Milan is verified, but the group loses momentum',
-          points: [
-            ['plus', 'Milan is registered <b>Present</b> by a human who actually saw him.'],
-            ['minus', 'The group you were helping stalls, and the student’s question has to wait.'],
-            ['info', 'Human control works, but it competes with teaching for the same attention.'],
-          ],
-        } : {
-          title: 'Nothing to review, but the check still costs attention',
-          points: [
-            ['plus', 'The queue is empty: Milan was already verified.'],
-            ['minus', 'You left the group for a minute to make sure.'],
-            ['info', 'Even when the system works, it asks for the teacher’s attention.'],
-          ],
+        key: 'A', label: 'Pause and check the dashboard', detail: 'Leave the group for a moment and work through the review queue.',
+        consequence: (c) => {
+          const open = openAtS2(c);
+          return {
+            title: `${open.length} reviews done, but the group loses momentum`,
+            points: [
+              ['plus', `Verified by you: ${verifiedSummary(c, open, 2)}.`],
+              ['minus', `Checking ${open.length} cases takes several minutes. The group you were helping stalls, and the student’s question has to wait.`],
+              ['info', 'Human control works, but it competes with teaching for the same attention.'],
+            ],
+          };
         },
       },
       {
-        key: 'B', label: 'Keep helping the students', detail: 'Teaching first. The notification stays in the queue.',
-        consequence: (c) => milanOpenAfterS1(c) ? {
-          title: 'The class gets your attention, Milan’s review waits',
-          points: [
-            ['plus', 'The students get help and the lesson flows.'],
-            ['minus', 'Milan stays <b>Uncertain</b>, and the 10:30 deadline is getting closer.'],
-            ['info', 'The fallback exists in the interface, but not in your time schedule.'],
-          ],
-        } : {
-          title: 'Teaching continues',
-          points: [
-            ['plus', 'The class gets your full attention.'],
-            ['info', 'Because you checked Milan at the start, nothing is waiting.'],
-          ],
+        key: 'B', label: 'Keep helping the students', detail: 'Teaching first. The open reviews stay in the queue.',
+        consequence: (c) => {
+          const open = openAtS2(c);
+          return {
+            title: 'The class gets your attention, the reviews wait',
+            points: [
+              ['plus', 'The students get help and the lesson flows.'],
+              ['minus', `${listNames(open)} stay <b>Uncertain</b>, and the 10:30 deadline is getting closer.`],
+              ['info', 'The fallback exists in the interface, but not in your time schedule.'],
+            ],
+          };
         },
       },
       {
-        key: 'C', label: 'Let PresenceAI handle the queue', detail: 'The AI ranks open cases and adds a suggestion.',
-        consequence: (c) => milanOpenAfterS1(c) ? {
-          title: 'The AI labels Milan before any human looks',
-          points: [
-            ['minus', 'PresenceAI adds the hint <b>“likely not present”</b> to Milan’s case (41% match).'],
-            ['minus', 'You see the hint in passing and keep teaching: it quietly shapes how the case looks.'],
-            ['info', 'Automation bias: a suggestion starts to feel like a decision.'],
-          ],
-        } : {
-          title: 'Nothing to prioritise, for now',
-          points: [
-            ['plus', 'The queue is empty.'],
-            ['info', 'But a system that ranks cases can also start steering decisions.'],
-          ],
+        key: 'C', label: 'Let PresenceAI handle the queue', detail: 'The AI ranks the open cases and adds a suggestion.',
+        consequence: (c) => {
+          const open = openAtS2(c);
+          return {
+            title: `The AI labels ${listNames(open)} before any human looks`,
+            points: [
+              ['minus', `PresenceAI adds the hint <b>“likely not present”</b> to ${open.length === 2 ? 'both' : `all ${open.length}`} open cases${open.includes('milan') ? ' (Milan: 41% match)' : ''}.`],
+              ['minus', 'Sara and Daan’s low confidence comes from the camera recalibration, not from them, yet the hint points at the students.'],
+              ['minus', 'You see the hints in passing and keep teaching: they quietly shape how the cases look.'],
+              ['info', 'Automation bias: a suggestion starts to feel like a decision.'],
+            ],
+          };
         },
       },
     ],
@@ -234,14 +230,14 @@ const STEPS = [
       const open = openBeforeS3(c);
       return `
         <p>In 2 minutes, at <strong>10:30</strong>, the attendance list is sent to the Education Office automatically. After that, teacher editing is locked: unresolved cases stay Uncertain and go to Education Office follow-up.</p>
-        <p>A separate technical problem: camera 2 was temporarily offline. <strong>Noor</strong> is in the room, but her entry was not processed, so her arrival time is unknown.</p>
+        <p>A separate technical problem: camera 2, at the room’s second door, was offline. <strong>Noor</strong> is in the room, but her entry was never processed: no record, no arrival time. Because the outage was logged, she is marked Uncertain.</p>
         <div class="callout">Still Uncertain: <b>${listNames(open)}</b></div>`;
     },
     question: 'What happens to the unresolved registrations?',
     reflection: 'Who should carry the cost of the system’s uncertainty: the teacher, the organisation or the student?',
     toasts: [
       { tone: 'warn', title: 'Attendance list sends at 10:30', text: 'Unresolved registrations will be included.' },
-      { tone: 'uncertain', title: 'Camera 2 back online', text: '1 unprocessed entry: Noor El Amrani' },
+      { tone: 'uncertain', title: 'Camera 2 back online · outage logged', text: 'Noor El Amrani has no registration → Uncertain' },
     ],
     choices: [
       {
@@ -542,20 +538,25 @@ function rosterAt(stageNo, c) {
     thijs: S('absent', '—', 'Reported sick · 08:31'),
     emma:  stageNo >= 2 ? S('late', '09:14') : S('pending'),
     zoe:   stageNo >= 2 ? S('late', '09:17') : S('pending'),
-    milan: S('uncertain', '08:59', 'Hood + new glasses · match 41%'),
-    sara:  stageNo >= 2 ? S('late', '09:21') : S('pending'),
-    daan:  stageNo >= 2 ? S('late', '09:23') : S('pending'),
-    noor:  stageNo >= 3 ? S('uncertain', '?', 'Camera 2 offline at entry · time unknown') : S('pending'),
+    milan: S('uncertain', '08:59', 'Hood, angle, light · match 41%'),
+    sara:  stageNo >= 2 ? S('uncertain', '09:21', 'Camera 1 recalibrated · low confidence') : S('pending'),
+    daan:  stageNo >= 2 ? S('uncertain', '09:23', 'Camera 1 recalibrated · low confidence') : S('pending'),
+    noor:  S('pending'),
   };
 
   // Stage 1 — review Milan immediately
   if (c.s1 === 'A') R.milan = S(arrivalStatus('08:59'), '08:59', 'Verified by teacher · 09:01', 'verified');
 
-  // Stage 2 — classroom pressure (only Milan can still be open)
-  if (stageNo >= 2 && c.s2 && R.milan.status === 'uncertain') {
-    if (c.s2 === 'A') R.milan = S(arrivalStatus('08:59'), '08:59', 'Verified by teacher · 09:26', 'verified');
-    if (c.s2 === 'C') R.milan.note = 'AI hint: “likely not present” · 41%';
+  // Stage 2 — review backlog: Milan (if still open), Sara and Daan
+  if (stageNo >= 2 && c.s2) {
+    Object.keys(R).filter((id) => R[id].status === 'uncertain').forEach((id) => {
+      if (c.s2 === 'A') R[id] = S(arrivalStatus(R[id].time), R[id].time, 'Verified by teacher · 09:26', 'verified');
+      if (c.s2 === 'C') R[id].note = `AI hint: “likely not present”${id === 'milan' ? ' · 41%' : ''}`;
+    });
   }
+
+  // Stage 3 — separate camera 2 failure: Noor's entry was never processed
+  if (stageNo >= 3) R.noor = S('uncertain', '?', 'Camera 2 offline · entry not processed');
 
   // Stage 3 — deadline
   if (stageNo >= 3 && c.s3) {
@@ -583,6 +584,21 @@ function listNames(ids) {
 
 const milanOpenAfterS1 = (c) => c.s1 !== 'A';
 
+/* Open reviews at Stage 2, before the Stage 2 choice: Sara and Daan, plus Milan if still open. */
+function openAtS2(c) {
+  const R = rosterAt(2, { s1: c.s1 });
+  return Object.keys(R).filter((id) => R[id].status === 'uncertain');
+}
+
+/* Where the doubt in a set of cases came from (for the Stage 4 system card). */
+function doubtSources(ids) {
+  const src = [];
+  if (ids.includes('milan')) src.push('41% match');
+  if (ids.includes('sara') || ids.includes('daan')) src.push('camera 1 recalibration');
+  if (ids.includes('noor')) src.push('camera 2 outage');
+  return src.join(', ');
+}
+
 /* Uncertain students at the start of stage 3 (before the stage-3 choice). */
 function openBeforeS3(c) {
   const R = rosterAt(3, { s1: c.s1, s2: c.s2 });
@@ -592,8 +608,8 @@ function openBeforeS3(c) {
 const isAbsentPath = (c) => c.s3 === 'C';
 
 /* e.g. "Milan <b>Present</b>, Sara and Daan <b>Late</b>": status follows each student's arrival time. */
-function verifiedSummary(c, ids) {
-  const R = rosterAt(3, c);
+function verifiedSummary(c, ids, stageNo = 3) {
+  const R = rosterAt(stageNo, c);
   return ['present', 'late']
     .map((st) => [st, ids.filter((id) => R[id].status === st)])
     .filter(([, group]) => group.length)
@@ -601,7 +617,6 @@ function verifiedSummary(c, ids) {
     .join(', ');
 }
 
-/* The student the consequences focus on: Milan if still unresolved, else Noor. */
 /* Every case that went to the Education Office at 10:30: still Uncertain, or auto-converted to Absent. */
 function sentForFollowUp(c) {
   const R = rosterAt(4, c);
@@ -609,6 +624,7 @@ function sentForFollowUp(c) {
     .sort((a, b) => (a === 'milan' ? -1 : b === 'milan' ? 1 : 0));   // Milan first: he is the main case
 }
 
+/* The student the consequences focus on: Milan if still unresolved, else Noor. */
 function focusId(c) {
   const R = rosterAt(4, c);
   return R.milan.status === 'present' ? 'noor' : 'milan';
@@ -623,9 +639,14 @@ function impactCards(c) {
   const unresolved = Object.keys(R).filter((id) => R[id].status === 'uncertain' || R[id].tag === 'auto');
   const n = unresolved.length;
   const rushed = c.s3 === 'A' && openBeforeS3(c).filter((id) => id !== 'noor').length >= 3;
+  const hintLine = c.s2 === 'C'
+    ? [['minus', `An AI hint (“likely not present”) was attached to ${listNames(openAtS2(c))} before any human check.`]]
+    : [];
 
   const teacherLine = rushed
     ? 'Teacher: the lesson ended in a rush of clicking.'
+    : c.s3 === 'A'
+      ? 'Teacher: the wrap-up was cut short for last-minute reviews.'
     : c.s2 === 'A'
       ? 'Teacher: lost teaching time, but feels in control.'
       : 'Teacher: the lesson ended on time.';
@@ -644,9 +665,9 @@ function impactCards(c) {
       system: {
         points: [
           ['minus', 'The record is complete, and wrong.'],
-          ['minus', 'The doubt (41% match, camera outage) is erased from the official record.'],
+          ['minus', `The doubt (${doubtSources(unresolved)}) is erased from the official record.`],
           ['minus', 'The error spreads to study progress, study advice and grant reporting.'],
-          ...(c.s2 === 'C' && milanOpenAfterS1(c) ? [['minus', 'An AI hint (“likely not present”) was attached to Milan before any human check.']] : []),
+          ...hintLine,
         ],
       },
       org: {
@@ -672,9 +693,9 @@ function impactCards(c) {
       points: [
         ['plus', `${n} registration${n === 1 ? '' : 's'} sent as Uncertain. The doubt stays visible.`],
         ['plus', 'No biometric doubt was turned into an official status.'],
-        ...(c.s2 === 'C' && milanOpenAfterS1(c) ? [['minus', 'An AI hint (“likely not present”) was attached to Milan before any human check.']] : []),
+        ...hintLine,
         ...(rushed ? [['minus', 'Several reviews in under a minute: verification on paper only.']] : []),
-        ['minus', 'Camera 2 outage: the hardware creates human work.'],
+        ['minus', `${unresolved.some((id) => id === 'sara' || id === 'daan') ? 'Camera 1 recalibration and camera 2 outage' : 'Camera 2 outage'}: the hardware creates human work.`],
       ],
     },
     org: {
@@ -762,7 +783,7 @@ function renderIntro() {
     <div class="layout layout-wide">
       <section class="panel report">
         <h1>What happens when human control exists,<br>but cannot be used in time?</h1>
-        <p class="lead">It’s 2045. At this university, <b>PresenceAI</b> registers attendance automatically with facial recognition as students walk into the classroom.</p>
+        <p class="lead">It’s 2045. At this university, <b>PresenceAI</b> registers attendance automatically with facial recognition at the classroom doorway, as students walk in. Nothing is monitored inside the room.</p>
         <div class="intro-grid">
           <div class="facts">
             <div class="fact"><span class="fact-num">1</span><span>Recognised students are registered as <b>Present</b> or <b>Late</b> automatically.</span></div>
@@ -881,7 +902,7 @@ function renderRoster(stageNo, c) {
       <div class="row ${r.status === 'uncertain' ? 'is-uncertain' : ''} ${changed ? 'flash' : ''}">
         <span class="avatar">${initials}</span>
         <span class="row-main"><strong>${STUDENTS[id].name}</strong>
-          <span class="row-note ${tagCls}">${r.time && r.time !== '—' ? r.time + ' · ' : ''}${r.note || (r.status === 'pending' ? 'Waiting for camera match' : 'Recognised automatically')}</span>
+          <span class="row-note ${tagCls}">${r.time && r.time !== '—' ? r.time + ' · ' : ''}${r.note || (r.status === 'pending' ? 'No doorway registration yet' : 'Recognised automatically')}</span>
         </span>
         <span class="status-cell">${r.status === 'uncertain'
           ? `<span class="status uncertain">Uncertain</span>${REVIEW_BADGE}`
