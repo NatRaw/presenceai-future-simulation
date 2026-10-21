@@ -79,13 +79,13 @@ const STEPS = [
   /* ---------------- STAGE 1 ---------------- */
   {
     id: 's1', type: 'stage', stageNo: 1, aside: 'roster',
-    progress: 'Stage 1 of 5 · First incident', tlTime: '09:07', tlName: 'Incident', clock: '09:07',
-    kicker: 'Incident · 09:07',
+    progress: 'Stage 1 of 5 · First incident', tlTime: '08:59', tlName: 'Incident', clock: '08:59',
+    kicker: 'Incident · 08:59',
     title: 'Milan can’t be recognised',
     situation: () => `
       <p><strong>Milan</strong> walks in wearing a hood and new glasses. PresenceAI only reaches a <strong>41% match</strong>.</p>
       <p>His status: <span class="status uncertain">Uncertain</span>${REVIEW_BADGE}</p>
-      <p>The lesson starts at 09:10. Three students are already at your desk with questions about the assignment.</p>`,
+      <p>The lesson starts at 09:00. Three students are already at your desk with questions about the assignment.</p>`,
     question: 'What do you do?',
     toasts: [{ tone: 'uncertain', title: '1 registration requires review', text: 'Milan de Vries · match 41%' }],
     choices: [
@@ -95,7 +95,7 @@ const STEPS = [
           title: 'Milan is verified, but the lesson starts late',
           points: [
             ['plus', 'Milan is registered <b>Present</b> by a human who actually saw him.'],
-            ['minus', 'The review takes 2 minutes. The lesson starts at 09:12.'],
+            ['minus', 'The review takes 2 minutes. The lesson starts at 09:02.'],
             ['minus', 'The three students with questions have to wait. The class gets restless.'],
           ],
         }),
@@ -123,9 +123,9 @@ const STEPS = [
     situation: (c) => {
       const n = stage2OpenCount(c);
       return `
-        <p>You’re 14 minutes into the lesson, helping a group with their prototype.</p>
+        <p>You’re 24 minutes into the lesson, helping a group with their prototype.</p>
         <p><strong>Sara</strong> (face mask, 81%) and <strong>Daan</strong> (low light at the back door, 78%) are now <span class="status uncertain">Uncertain</span>.</p>
-        ${milanOpenAfterS1(c) ? '<p><strong>Milan</strong> is still open from 09:07.</p>' : ''}
+        ${milanOpenAfterS1(c) ? '<p><strong>Milan</strong> is still open from 08:59.</p>' : ''}
         <div class="callout">Your dashboard now shows <b>${n} open review${n === 1 ? '' : 's'}</b>.</div>`;
     },
     question: 'How do you handle the growing queue?',
@@ -162,7 +162,7 @@ const STEPS = [
         consequence: (c) => ({
           title: 'The AI did the work. Did you still decide?',
           points: [
-            ['plus', 'PresenceAI suggests <b>Present</b> for Sara and Daan. You accept both with one click.'],
+            ['plus', 'PresenceAI suggests <b>Late</b> for Sara and Daan (they came in after 09:00). You accept both with one click.'],
             ['minus', 'You didn’t actually look. The log still says “verified by teacher”.'],
             milanOpenAfterS1(c)
               ? ['minus', 'Milan is ranked last, with the hint <b>“likely not present”</b>.']
@@ -199,7 +199,7 @@ const STEPS = [
           const verifiable = openBeforeS3(c).filter((id) => id !== 'noor');
           const rushed = verifiable.length >= 3;
           const points = [];
-          if (verifiable.length) points.push(['plus', `${listNames(verifiable)} verified <b>Present</b>.`]);
+          if (verifiable.length) points.push(['plus', `Verified by you: ${verifiedSummary(c, verifiable)}.`]);
           if (rushed) points.push(['minus', `You clicked through ${verifiable.length} cases in 40 seconds while packing up. Was that meaningful review?`]);
           points.push(['info', 'Noor stays <b>Uncertain</b>. You didn’t see when she came in, so you can’t honestly choose Present or Late.']);
           points.push(['minus', 'The wrap-up and assignment briefing are cut short.']);
@@ -456,35 +456,39 @@ function S(status, time = '', note = '', tag = '') {
   return { status, time, note, tag };
 }
 
+/* Lesson starts at 09:00 (as in the PresenceAI prototype): arriving after that = Late. */
+const LESSON_START = '09:00';
+const arrivalStatus = (time) => (time > LESSON_START ? 'late' : 'present');   // "HH:MM" strings compare correctly
+
 /* Roster at a given stage (1–5), using the choices made so far. */
 function rosterAt(stageNo, c) {
   const R = {
-    aylin: S('present', '09:02'),
-    bram:  S('present', '09:03'),
-    finn:  S('present', '09:04'),
-    chloe: S('present', '09:05'),
-    yara:  S('present', '09:06'),
+    aylin: S('present', '08:52'),
+    bram:  S('present', '08:54'),
+    finn:  S('present', '08:55'),
+    chloe: S('present', '08:57'),
+    yara:  S('present', '08:58'),
     thijs: S('absent', '—', 'Reported sick · 08:31'),
     emma:  stageNo >= 2 ? S('late', '09:14') : S('pending'),
     zoe:   stageNo >= 2 ? S('late', '09:17') : S('pending'),
-    milan: S('uncertain', '09:07', 'Hood + new glasses · match 41%'),
+    milan: S('uncertain', '08:59', 'Hood + new glasses · match 41%'),
     sara:  stageNo >= 2 ? S('uncertain', '09:21', 'Face mask · match 81%') : S('pending'),
     daan:  stageNo >= 2 ? S('uncertain', '09:23', 'Low light, back door · match 78%') : S('pending'),
     noor:  stageNo >= 3 ? S('uncertain', '?', 'Camera 2 offline at entry · time unknown') : S('pending'),
   };
 
   // Stage 1 — review Milan immediately
-  if (c.s1 === 'A') R.milan = S('present', '09:07', 'Verified by teacher · 09:09', 'verified');
+  if (c.s1 === 'A') R.milan = S(arrivalStatus('08:59'), '08:59', 'Verified by teacher · 09:01', 'verified');
 
   // Stage 2 — growing queue
   if (stageNo >= 2 && c.s2) {
     const open = ['milan', 'sara', 'daan'].filter((id) => R[id].status === 'uncertain');
     if (c.s2 === 'A') {
-      open.forEach((id) => { R[id] = S('present', R[id].time, 'Verified by teacher · 09:31', 'verified'); });
+      open.forEach((id) => { R[id] = S(arrivalStatus(R[id].time), R[id].time, 'Verified by teacher · 09:31', 'verified'); });
     }
     if (c.s2 === 'C') {
-      R.sara = S('present', '09:21', 'AI suggestion accepted · 1 click', 'ai');
-      R.daan = S('present', '09:23', 'AI suggestion accepted · 1 click', 'ai');
+      R.sara = S('late', '09:21', 'AI suggestion accepted · 1 click', 'ai');
+      R.daan = S('late', '09:23', 'AI suggestion accepted · 1 click', 'ai');
       if (R.milan.status === 'uncertain') R.milan.note = 'AI hint: “likely not present” · 41%';
     }
   }
@@ -496,7 +500,7 @@ function rosterAt(stageNo, c) {
       if (c.s3 === 'A') {
         R[id] = id === 'noor'
           ? S('uncertain', '?', 'Reviewed · arrival time can’t be confirmed')
-          : S('present', R[id].time, 'Verified by teacher · 10:29', 'verified');
+          : S(arrivalStatus(R[id].time), R[id].time, 'Verified by teacher · 10:29', 'verified');
       }
       if (c.s3 === 'B') R[id] = S('uncertain', R[id].time, 'Sent as Uncertain · 10:30');
       if (c.s3 === 'C') R[id] = S('absent', R[id].time, 'Auto-absent · not verified', 'auto');
@@ -523,6 +527,16 @@ function openBeforeS3(c) {
 }
 
 const isAbsentPath = (c) => c.s3 === 'C';
+
+/* e.g. "Milan <b>Present</b>, Sara and Daan <b>Late</b>": status follows each student's arrival time. */
+function verifiedSummary(c, ids) {
+  const R = rosterAt(3, c);
+  return ['present', 'late']
+    .map((st) => [st, ids.filter((id) => R[id].status === st)])
+    .filter(([, group]) => group.length)
+    .map(([st, group]) => `${listNames(group)} <b>${STATUS_LABELS[st]}</b>`)
+    .join(', ');
+}
 
 /* The student the consequences focus on: Milan if still unresolved, else Noor. */
 function focusId(c) {
