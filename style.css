@@ -582,6 +582,7 @@ button { font: inherit; color: inherit; }
 }
 .kpi span { font-size: .78rem; color: var(--muted); font-weight: 600; }
 .kpi b { display: block; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.kpi small { display: block; margin-top: .15rem; font-size: .72rem; color: var(--muted); }
 .kpi.alert { background: var(--warn-bg); border-color: #f6cf9f; }
 .kpi.alert b { color: var(--warn); }
 .kpi.purple { background: var(--uncertain-bg); border-color: var(--uncertain-line); }

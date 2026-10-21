@@ -313,8 +313,12 @@ const STEPS = [
     reflection: 'Who should have to prove what really happened: the institution or the student?',
     question: (c) => {
       const ids = sentForFollowUp(c);
-      const who = ids.length === 1 ? `${listNames(ids)}’s case is` : `the cases of ${listNames(ids)} are`;
-      return `Teacher editing is locked since 10:30, so ${who} now with the Education Office. How should they follow ${ids.length === 1 ? 'it' : 'them'} up?`;
+      const one = ids.length === 1;
+      if (isAbsentPath(c)) {
+        return `Teacher editing is locked since 10:30. When ${listNames(ids)} dispute${one ? 's' : ''} the absence${one ? '' : 's'}, the ${one ? 'case goes' : 'cases go'} to the Education Office. How should they follow ${one ? 'it' : 'them'} up?`;
+      }
+      const who = one ? `${listNames(ids)}’s case is` : `the cases of ${listNames(ids)} are`;
+      return `Teacher editing is locked since 10:30, so ${who} now with the Education Office. How should they follow ${one ? 'it' : 'them'} up?`;
     },
     toasts: [{ tone: 'org', title: 'Attendance list sent · 10:30', text: 'Delivered to the Education Office.' }],
     choices: [
@@ -324,7 +328,7 @@ const STEPS = [
           title: 'Context from the teacher, decision by the Office',
           points: [
             ['plus', 'The teacher was there and might remember.'],
-            ['minus', 'Days later, the teacher answers from memory between two other lessons.'],
+            ['minus', 'The teacher answers later, from memory, between two other lessons.'],
             ['info', 'Human verification still leans on one overloaded person.'],
           ],
         }),
@@ -334,9 +338,9 @@ const STEPS = [
         consequence: () => ({
           title: 'Careful review, but slow and costly',
           points: [
-            ['plus', 'A dedicated process with time and a deadline.'],
-            ['minus', 'Admin still has to contact the teacher and the student: ~20 minutes per case.'],
-            ['info', 'Across the faculty that is 340 cases a week.'],
+            ['plus', 'A careful check by someone with the time and the mandate to decide.'],
+            ['minus', 'For every case, the Office has to contact both the teacher and the student.'],
+            ['info', 'In this simulated scenario, that is ~340 cases a week across the faculty.'],
           ],
         }),
       },
@@ -370,7 +374,7 @@ const STEPS = [
       <p>PresenceAI now runs in <strong>120 classrooms</strong>. Every week <strong>340 registrations</strong> end up Uncertain. The Education Office can’t keep up.</p>
       <div class="callout c-org">${{
         A: 'Teachers complain: answering the Education Office’s statement requests eats their preparation time.',
-        B: 'The Education Office says it needs 1.5 extra staff (FTE) to handle the queue.',
+        B: 'The Education Office says it needs extra staff to handle the queue.',
         C: 'Student claims are piling up, and some look suspicious.',
       }[c.s4] || ''}</div>
       <div class="callout c-student"><span class="sim-label">Simulated 2045 stakeholder perspective</span>
@@ -400,7 +404,7 @@ const STEPS = [
           title: 'Boundary kept, problem not solved',
           points: [
             ['plus', 'No student gets an unverified absence.'],
-            ['plus', 'Students keep trusting the system.'],
+            ['plus', 'Students are not penalised for the system’s doubt.'],
             ['minus', 'The Education Office backlog keeps growing, and teachers still feel the pressure in class.'],
             ['info', 'Safe, but not sustainable at scale.'],
           ],
@@ -412,10 +416,10 @@ const STEPS = [
           title: 'Boundary kept, process redesigned',
           tone: 'good',
           points: [
-            ['plus', 'A clear hand-off: after 10:30, unresolved cases move to an Education Office team that resolves them within 48 hours.'],
+            ['plus', 'A clear hand-off: after 10:30, unresolved cases stay Uncertain and move to an Education Office team with a set procedure and deadline.'],
             ['plus', 'The student is notified and can respond; the teacher does not need to reopen the attendance list.'],
-            ['plus', 'An alternative check-in (student card / QR) for anyone the camera can’t see.'],
-            ['minus', 'The roll-out is delayed by a semester and costs extra.'],
+            ['plus', 'An alternative check-in (student card / QR) for anyone the doorway camera can’t verify.'],
+            ['minus', 'Scaling up is delayed and costs more: the fallback, the alternative check-in and the Education Office workflow first have to be implemented and tested.'],
             ['info', 'Human control is designed into the organisation, not left to the teacher.'],
           ],
         }),
@@ -449,7 +453,7 @@ const ETHICS = {
       'A wrong absence <b>lowers the attendance percentage</b>.',
       'In this scenario, dropping below the simulated 80% threshold triggers an automatic warning and further follow-up.',
       'Errors fall more often on students the camera recognises less well, so the <b>harm is unequal</b>.',
-      'Lost trust costs more than the admin time it saves.',
+      'Lost trust can outweigh the admin time it saves.',
     ],
   },
 };
@@ -463,18 +467,18 @@ const ELSA = [
   },
   {
     cls: 'l', letter: 'L', title: 'Legal',
-    plus: ['Uncertain status avoids automated decisions with legal effect (GDPR art. 22)', 'Short retention possible: delete templates after matching'],
+    plus: ['Uncertain status avoids fully automated decisions with significant effects (GDPR art. 22)', 'Short retention possible: delete doorway images after matching'],
     minus: ['Biometric data is a special category (GDPR art. 9) and needs a strong legal basis', 'Purpose limitation: risk of creep into behaviour or security monitoring', 'Data minimisation: store match results, not faces', 'A meaningful non-biometric alternative is required'],
   },
   {
     cls: 's', letter: 'S', title: 'Social',
     plus: ['Fewer discussions about who was there', 'Trust grows when a system admits doubt'],
-    minus: ['A feeling of constant surveillance', 'The teacher becomes the camera’s administrator', 'Students who are flagged more often feel excluded', 'Acceptance depends on a fair fallback'],
+    minus: ['A feeling of being watched, even with doorway-only scanning','The teacher becomes the camera’s administrator', 'Students who are flagged more often feel excluded', 'Acceptance depends on a fair fallback'],
   },
   {
     cls: 't', letter: 'T', title: 'Technological',
     plus: ['Fast, automatic registration for most students', 'Confidence scores make uncertainty visible and measurable'],
-    minus: ['False recognition (masks, glasses, lighting)', 'Camera failure (camera 2 offline)', 'The biometric database is a high-value security target', 'A fallback only works if the process around it works'],
+    minus: ['Low-confidence matches (angle, occlusion, changing light)', 'Camera issues (camera 1 recalibration, camera 2 outage)','The biometric database is a high-value security target', 'A fallback only works if the process around it works'],
   },
 ];
 
@@ -499,7 +503,7 @@ const REDESIGN_FLOW = [
   { cls: 's-unc', title: 'Not confident', text: 'Uncertain, visible; attendance % frozen' },
   { cls: '', title: 'Teacher, until 10:30', text: 'Optional review in class; list sent at 10:30' },
   { cls: '', title: 'Education Office', text: 'After 10:30: follows up; teacher does not reopen the list' },
-  { cls: '', title: 'Student', text: 'Notified and can respond, with an alternative check-in' },
+  { cls: '', title: 'Student', text: 'Notified and can respond before any decision' },
   { cls: 's-ok', title: 'Verified status', text: 'Only a human decision changes the record' },
 ];
 
@@ -659,21 +663,21 @@ function impactCards(c) {
         points: [
           ['minus', `${F} is marked Absent, but was in the room.`],
           ['minus', `An automatic warning email is sent. ${F} has to dispute it.`],
-          ['minus', `${teacherLine} You didn’t realise anything was wrong.`],
+          ['minus', `${teacherLine} The list looked complete when it was sent.`],
         ],
       },
       system: {
         points: [
           ['minus', 'The record is complete, and wrong.'],
           ['minus', `The doubt (${doubtSources(unresolved)}) is erased from the official record.`],
-          ['minus', 'The error spreads to study progress, study advice and grant reporting.'],
+          ['minus', 'The error can spread to study progress records and study advice.'],
           ...hintLine,
         ],
       },
       org: {
         points: [
           ['minus', 'The Education Office sees a clean list, so no problem is visible.'],
-          ['minus', `A complaint arrives 4 days later. ${F} carries the burden of proof.`],
+          ['minus', `The problem only surfaces when ${F} disputes it, and ${F} carries the burden of proof.`],
           ['info', 'Who decided: the AI, the teacher or the process?'],
         ],
       },
@@ -684,8 +688,8 @@ function impactCards(c) {
     user: {
       pct: `<div class="pct"><b class="same">${pct}% → ${pct}%</b><small>${F}’s attendance · unchanged</small></div>`,
       points: [
-        ['plus', `${F} gets a notification: “Your registration could not be verified. Please respond within 5 days.”`],
-        ['plus', 'Nothing is decided yet, and the student can respond.'],
+        ['plus', `${F} gets a notification: “Your registration could not be verified. You can respond.”`],
+        ['plus', 'The status stays Uncertain: nothing is decided yet.'],
         ['info', teacherLine],
       ],
     },
@@ -701,8 +705,8 @@ function impactCards(c) {
     org: {
       points: [
         ['plus', `The Education Office receives ${n} open case${n === 1 ? '' : 's'} and can investigate.`],
-        ['minus', 'The Education Office owns the case, but there is no procedure or deadline yet.'],
-        ['info', 'Across the faculty: ~340 uncertain cases a week.'],
+        ['minus', `The Education Office owns the case${n === 1 ? '' : 's'}, but there is no procedure or deadline yet.`],
+        ['info', 'Simulated scenario: ~340 uncertain cases a week across the faculty.'],
       ],
     },
   };
@@ -948,15 +952,14 @@ function renderKpis(c) {
   return `
     <aside class="panel attendance">
       <div class="panel-head">
-        <div><h2>Faculty overview</h2><div class="sub">Week 12 · all programmes</div><span class="sim-label">Simulated scenario data · 2045</span></div>
+        <div><h2>Faculty overview</h2><div class="sub">Week 13 · all programmes</div><span class="sim-label">Simulated scenario data · 2045</span></div>
         <span class="live-dot">Live</span>
       </div>
       <div class="kpis">
-        <div class="kpi"><span>Classrooms using PresenceAI</span><b>120</b></div>
-        <div class="kpi"><span>Registrations this week</span><b>18,400</b></div>
-        <div class="kpi purple"><span>Uncertain this week</span><b>340</b></div>
-        <div class="kpi alert"><span>Resolved within 5 days</span><b>41%</b><div class="bar"><i style="width:41%"></i></div></div>
-        <div class="kpi"><span>Uncertain rate by camera / student group</span><b>1.1% – 4.6%</b></div>
+        <div class="kpi"><span>Registrations this week</span><b>18,400</b><small>120 classrooms with PresenceAI</small></div>
+        <div class="kpi purple"><span>Required human review this week</span><b>340</b><small>Uncertain · each student notified</small></div>
+        <div class="kpi alert"><span>Last week’s cases resolved within 5 days</span><b>41%</b><div class="bar"><i style="width:41%"></i></div><small>139 of 340 resolved · 201 still open</small></div>
+        <div class="kpi"><span>Room AC1.18 · this week</span><b>327 · 11</b><small>327 processed automatically · 11 required review</small></div>
         ${isAbsentPath(c) ? '<div class="kpi alert"><span>Attendance disputes this week</span><b>27</b></div>' : ''}
       </div>
     </aside>`;
