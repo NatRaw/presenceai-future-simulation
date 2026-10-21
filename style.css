@@ -864,3 +864,51 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Simulated-data labels, student perspective, trade-off reflection ---------- */
+.sim-label {
+  display: inline-block;
+  font-size: .64rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: .12rem .5rem;
+  vertical-align: middle;
+}
+.panel-head .sim-label { margin-top: .3rem; }
+.callout .sim-label { display: block; width: fit-content; margin-bottom: .3rem; }
+.callout.c-student { border-color: var(--user); background: var(--brand-soft); }
+.sim-note { font-size: .8rem; color: var(--muted); margin-top: auto; }
+
+.tradeoff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem 1rem;
+  padding: .7rem .9rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: .92rem;
+}
+.tradeoff .section-label { display: block; margin-bottom: .15rem; }
+.tradeoff-along { grid-column: 1 / -1; font-size: .82rem; color: var(--muted); }
+@media (max-width: 860px) { .tradeoff { grid-template-columns: 1fr; } }
+
+/* Compact spacing so the boundary + trade-off and the final reflection fit without scrolling */
+.boundary-screen .boundary-statement { font-size: 1.15rem; padding: .8rem 1.1rem; }
+.boundary-screen .verdict { padding: .55rem 1rem; font-size: .98rem; }
+.boundary-screen .verdict .v-icon { width: 2rem; height: 2rem; font-size: 1.3rem; }
+.boundary-screen .card { padding: .75rem 1rem; }
+.boundary-screen .card h3 { font-size: 1.02rem; margin-bottom: .35rem; }
+.boundary-screen .card .pt { font-size: .88rem; }
+.boundary-screen .points { gap: .25rem; }
+.tradeoff { padding: .55rem .9rem; font-size: .9rem; }
+.reflect-col ul { gap: .2rem; }
+.reflect-col li { font-size: .84rem; }
+.report.compact .card { padding: .75rem .95rem; }
+.report.compact .flow-step { padding: .45rem .6rem; }
+.report.compact .never { padding: .4rem .9rem; }

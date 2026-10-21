@@ -52,6 +52,31 @@ const STATUS_LABELS = {
    with a small secondary yellow badge as an attention cue (prototype: "Controle nodig"). */
 const REVIEW_BADGE = '<span class="review-badge">Review needed</span>';
 
+/* Final reflection: what the participant prioritised and what they sacrificed, based on their path.
+   Edit the wording here. Only existing choices are used; no new branches. */
+function tradeOff(c) {
+  let main;
+  if (c.s5 === 'A') {
+    main = { prio: 'You prioritised efficiency.',
+             sacr: 'You sacrificed meaningful human verification: uncertain recognition now becomes an official absence.' };
+  } else if (c.s3 === 'C') {
+    main = { prio: `Under deadline pressure in class you prioritised efficiency; as policy you chose ${c.s5 === 'C' ? 'a redesign' : 'the human fallback'}.`,
+             sacr: 'In class you sacrificed meaningful human verification for the students you marked absent.' };
+  } else if (c.s5 === 'B') {
+    main = { prio: 'You prioritised fairness.',
+             sacr: 'The organisation accepts additional follow-up work.' };
+  } else {
+    main = { prio: 'You prioritised human control.',
+             sacr: 'The system remains less administratively efficient, and the roll-out is delayed.' };
+  }
+  const along = c.s2 === 'C'
+    ? 'Along the way you accepted AI suggestions in one click, so “human verified” was partly a formality.'
+    : (c.s1 === 'A' || c.s2 === 'A')
+      ? 'Along the way you spent teaching time on reviews during the lesson.'
+      : '';
+  return { ...main, along };
+}
+
 /* Short labels for the "your path" recap. */
 const PATH_LABELS = {
   s1: { A: 'Reviewed Milan immediately', B: 'Left Milan for later' },
@@ -303,12 +328,15 @@ const STEPS = [
     kicker: 'Organisational decision · Faculty Board', kickerClass: 'k-policy',
     title: 'Management wants efficiency',
     situation: (c) => `
+      <span class="sim-label">Simulated scenario data · 2045</span>
       <p>PresenceAI now runs in <strong>120 classrooms</strong>. Every week <strong>340 registrations</strong> end up Uncertain. The Education Office can’t keep up.</p>
       <div class="callout c-org">${{
         A: 'Teachers complain: resolving cases after class eats their preparation time.',
         B: 'The Education Office says it needs 1.5 extra staff (FTE) to handle the queue.',
         C: 'Student claims are piling up, and some look suspicious.',
       }[c.s4] || ''}</div>
+      <div class="callout c-student"><span class="sim-label">Simulated 2045 stakeholder perspective</span>
+        <b>Student perspective:</b> students may feel that the burden of correcting an AI error has shifted onto them.</div>
       <div class="quote">“To increase efficiency, automatically mark unresolved students absent after the lesson.”</div>`,
     question: 'The board asks for your decision.',
     toasts: [{ tone: 'org', title: 'Policy proposal · Faculty Board', text: 'Automatic absence for unresolved cases' }],
@@ -320,7 +348,7 @@ const STEPS = [
           tone: 'danger',
           boundary: true,
           points: [
-            ['minus', '340 unverified absences per week. In the pilot, <b>7 of 10</b> uncertain students were actually present.'],
+            ['minus', '340 unverified absences per week. In this simulated scenario, <b>7 of 10</b> uncertain students turn out to have been present.'],
             ['minus', 'Students the camera recognises less well get punished more often.'],
             ['minus', 'The workload moves from administration to the complaints desk.'],
             ['info', 'The uncertainty belongs to the system, but the penalty lands on the student.'],
@@ -380,7 +408,7 @@ const ETHICS = {
     title: 'Consequentialism',
     points: [
       'A wrong absence <b>lowers the attendance percentage</b>.',
-      'Dropping below 80% triggers warnings, study-advice talks and possibly grant or visa reports.',
+      'In this scenario, dropping below the simulated 80% threshold triggers an automatic warning and further follow-up.',
       'Errors fall more often on students the camera recognises less well, so the <b>harm is unequal</b>.',
       'Lost trust costs more than the admin time it saves.',
     ],
@@ -564,7 +592,7 @@ function impactCards(c) {
     const after = pct - ABSENCE_PENALTY;
     return {
       user: {
-        pct: `<div class="pct"><b class="down">${pct}% → ${after}%</b><small>${F}’s attendance · threshold ${ATTENDANCE_THRESHOLD}%</small></div>`,
+        pct: `<div class="pct"><b class="down">${pct}% → ${after}%</b><small>${F}’s attendance · simulated threshold ${ATTENDANCE_THRESHOLD}%</small></div>`,
         points: [
           ['minus', `${F} is marked Absent, but was in the room.`],
           ['minus', `An automatic warning email is sent. ${F} has to dispute it.`],
@@ -707,6 +735,7 @@ function renderIntro() {
             </div>
           </div>
         </div>
+        <p class="sim-note">All names, numbers, thresholds and rules in this simulation are simulated 2045 scenario data, not findings from research.</p>
       </section>
     </div>`;
 }
@@ -736,7 +765,7 @@ function renderStage(step, c) {
     return `
       <div class="layout layout-wide">
         <section class="panel wide-card">
-          <span class="kicker ${step.kickerClass || ''}">${step.kicker}</span>
+          <span class="kicker ${step.kickerClass || ''}">${step.kicker}</span> <span class="sim-label">Simulated scenario data · 2045</span>
           <h1 style="font-size:1.75rem">${val(step.title, c)}</h1>
           <div class="impact-grid">
             ${impactCard('user', 'USER', 'Teacher & student', imp.user)}
@@ -855,7 +884,7 @@ function renderKpis(c) {
   return `
     <aside class="panel attendance">
       <div class="panel-head">
-        <div><h2>Faculty overview</h2><div class="sub">Week 12 · all programmes</div></div>
+        <div><h2>Faculty overview</h2><div class="sub">Week 12 · all programmes</div><span class="sim-label">Simulated scenario data · 2045</span></div>
         <span class="live-dot">Live</span>
       </div>
       <div class="kpis">
@@ -871,6 +900,7 @@ function renderKpis(c) {
 
 /* ---------- Moral boundary ---------- */
 function renderBoundary(c) {
+  const trade = tradeOff(c);
   const policy = c.s5 === 'A';
   const inClass = c.s3 === 'C';
   let verdict;
@@ -892,10 +922,15 @@ function renderBoundary(c) {
 
   return `
     <div class="layout layout-wide">
-      <section class="panel report">
+      <section class="panel report compact boundary-screen">
         <span class="kicker k-result">Moral boundary</span>
         <div class="boundary-statement">“${MORAL_BOUNDARY}”</div>
         <div class="verdict ${verdict[0]}"><span class="v-icon">${verdict[1]}</span><div><b>${verdict[2]}</b>${verdict[3]}</div></div>
+        <div class="tradeoff">
+          <div><span class="section-label">What you prioritised</span>${trade.prio}</div>
+          <div><span class="section-label">What you sacrificed</span>${trade.sacr}</div>
+          ${trade.along ? `<p class="tradeoff-along">${trade.along}</p>` : ''}
+        </div>
         <div class="two-col">
           ${card(ETHICS.duty, 'var(--user)')}
           ${card(ETHICS.consequences, 'var(--system)')}
