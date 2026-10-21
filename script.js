@@ -311,7 +311,11 @@ const STEPS = [
       ? `${first(focusId(c))} is officially Absent`
       : `${first(focusId(c))}’s case is open, and honest`,
     impacts: (c) => impactCards(c),
-    question: (c) => `Teacher editing is locked since 10:30, so ${first(focusId(c))}’s case is now with the Education Office. How should they follow it up?`,
+    question: (c) => {
+      const ids = sentForFollowUp(c);
+      const who = ids.length === 1 ? `${listNames(ids)}’s case is` : `the cases of ${listNames(ids)} are`;
+      return `Teacher editing is locked since 10:30, so ${who} now with the Education Office. How should they follow ${ids.length === 1 ? 'it' : 'them'} up?`;
+    },
     toasts: [{ tone: 'org', title: 'Attendance list sent · 10:30', text: 'Delivered to the Education Office.' }],
     choices: [
       {
@@ -337,7 +341,10 @@ const STEPS = [
         }),
       },
       {
-        key: 'C', label: 'Ask the student for proof', detail: (c) => `${first(focusId(c))} submits proof via self-service; the Office checks it.`,
+        key: 'C', label: 'Ask the student for proof', detail: (c) => {
+          const ids = sentForFollowUp(c);
+          return `${listNames(ids)} submit${ids.length === 1 ? 's' : ''} proof via self-service; the Office checks it.`;
+        },
         consequence: (c) => ({
           title: 'Fast, but the burden shifts to the student',
           points: [
@@ -590,6 +597,13 @@ function verifiedSummary(c, ids) {
 }
 
 /* The student the consequences focus on: Milan if still unresolved, else Noor. */
+/* Every case that went to the Education Office at 10:30: still Uncertain, or auto-converted to Absent. */
+function sentForFollowUp(c) {
+  const R = rosterAt(4, c);
+  return Object.keys(R).filter((id) => R[id].status === 'uncertain' || R[id].tag === 'auto')
+    .sort((a, b) => (a === 'milan' ? -1 : b === 'milan' ? 1 : 0));   // Milan first: he is the main case
+}
+
 function focusId(c) {
   const R = rosterAt(4, c);
   return R.milan.status === 'present' ? 'noor' : 'milan';
