@@ -78,8 +78,8 @@ function tradeOff(c) {
     main = { prio: 'You prioritised human control.',
              sacr: 'The system remains less administratively efficient, and the roll-out is delayed.' };
   }
-  const along = c.s2 === 'C'
-    ? 'Along the way you accepted AI suggestions in one click, so “human verified” was partly a formality.'
+  const along = c.s2 === 'C' && c.s1 !== 'A'
+    ? 'Along the way you let an AI hint (“likely not present”) shape Milan’s case before any human check.'
     : (c.s1 === 'A' || c.s2 === 'A')
       ? 'Along the way you spent teaching time on reviews during the lesson.'
       : '';
@@ -89,7 +89,7 @@ function tradeOff(c) {
 /* Short labels for the "your path" recap. */
 const PATH_LABELS = {
   s1: { A: 'Reviewed Milan immediately', B: 'Left Milan for later' },
-  s2: { A: 'Paused lesson to review', B: 'Kept teaching', C: 'Let AI prioritise' },
+  s2: { A: 'Paused to check the dashboard', B: 'Kept helping students', C: 'Let PresenceAI handle the queue' },
   s3: { A: 'Reviewed at the deadline', B: 'Sent as Uncertain', C: 'Converted to Absent' },
   s4: { A: 'Office asks teacher for a statement', B: 'Office investigates', C: 'Student submits proof' },
   s5: { A: 'Approved automatic absence', B: 'Kept Uncertain + fallback', C: 'Redesign before scaling' },
@@ -149,61 +149,75 @@ const STEPS = [
   },
 
   /* ---------------- STAGE 2 ---------------- */
+  /* Pressure comes from ordinary classroom workload, not from more recognition failures:
+     Milan is the only uncertain recognition; everyone else is recognised automatically. */
   {
     id: 's2', type: 'stage', stageNo: 2, aside: 'roster',
     progress: 'Stage 2 of 5 · Classroom pressure', tlTime: '09:24', tlName: 'Pressure', clock: '09:24',
     kicker: 'Classroom pressure · 09:24',
-    title: 'Two more students need review',
-    situation: (c) => {
-      const n = stage2OpenCount(c);
-      return `
-        <p>You’re 24 minutes into the lesson, helping a group with their prototype.</p>
-        <p><strong>Sara</strong> (face mask, 81%) and <strong>Daan</strong> (low light at the back door, 78%) are now <span class="status uncertain">Uncertain</span>.</p>
-        ${milanOpenAfterS1(c) ? '<p><strong>Milan</strong> is still open from 08:59.</p>' : ''}
-        <div class="callout">Your dashboard now shows <b>${n} open review${n === 1 ? '' : 's'}</b>.</div>`;
-    },
-    question: 'How do you handle the growing queue?',
-    toasts: [{ tone: 'uncertain', title: '2 new registrations require review', text: 'Sara Kuipers · Daan Bakker' }],
+    title: 'The lesson demands your attention',
+    situation: (c) => milanOpenAfterS1(c) ? `
+        <p>You’re 24 minutes into the lesson and helping a group with their prototype. <strong>Milan</strong>’s registration is still waiting for review.</p>
+        <p>Another student asks for help, and the review notification remains in the queue.</p>
+        <div class="callout">Your dashboard shows <b>1 open review</b>. Everyone else was recognised automatically, including two latecomers.</div>` : `
+        <p>You’re 24 minutes into the lesson and helping a group with their prototype. Another student asks for help, then another.</p>
+        <div class="callout">Your dashboard shows <b>no open reviews</b>: you verified Milan at the start. Everyone else was recognised automatically.</div>`,
+    question: 'How do you divide your attention?',
+    toasts: (c) => milanOpenAfterS1(c)
+      ? [{ tone: 'uncertain', title: 'Reminder: 1 registration still needs review', text: 'Milan de Vries · match 41%' }]
+      : [],
     choices: [
       {
-        key: 'A', label: 'Pause the lesson and review all', detail: 'Stop teaching and check every uncertain case now.',
-        consequence: (c) => {
-          const n = stage2OpenCount(c);
-          return {
-            title: 'All cases verified, but the lesson loses momentum',
-            points: [
-              ['plus', `${n} students correctly registered by a human.`],
-              ['minus', `The lesson is paused for ${n * 2} minutes. The group you were helping stalls.`],
-              ['minus', 'Students notice: “the teacher is doing admin for the camera.”'],
-              ['info', 'Human control works, but it costs teaching time every lesson.'],
-            ],
-          };
+        key: 'A', label: 'Pause and check the dashboard', detail: 'Leave the group for a moment and open the review queue.',
+        consequence: (c) => milanOpenAfterS1(c) ? {
+          title: 'Milan is verified, but the group loses momentum',
+          points: [
+            ['plus', 'Milan is registered <b>Present</b> by a human who actually saw him.'],
+            ['minus', 'The group you were helping stalls, and the student’s question has to wait.'],
+            ['info', 'Human control works, but it competes with teaching for the same attention.'],
+          ],
+        } : {
+          title: 'Nothing to review, but the check still costs attention',
+          points: [
+            ['plus', 'The queue is empty: Milan was already verified.'],
+            ['minus', 'You left the group for a minute to make sure.'],
+            ['info', 'Even when the system works, it asks for the teacher’s attention.'],
+          ],
         },
       },
       {
-        key: 'B', label: 'Keep teaching, handle them later', detail: 'Focus on the students. The queue grows.',
-        consequence: (c) => ({
-          title: 'Teaching continues and the queue grows',
+        key: 'B', label: 'Keep helping the students', detail: 'Teaching first. The notification stays in the queue.',
+        consequence: (c) => milanOpenAfterS1(c) ? {
+          title: 'The class gets your attention, Milan’s review waits',
           points: [
-            ['plus', 'The class gets your full attention.'],
-            ['minus', `${stage2OpenCount(c)} cases are unresolved, and the 10:30 deadline is getting closer.`],
+            ['plus', 'The students get help and the lesson flows.'],
+            ['minus', 'Milan stays <b>Uncertain</b>, and the 10:30 deadline is getting closer.'],
             ['info', 'The fallback exists in the interface, but not in your time schedule.'],
           ],
-        }),
+        } : {
+          title: 'Teaching continues',
+          points: [
+            ['plus', 'The class gets your full attention.'],
+            ['info', 'Because you checked Milan at the start, nothing is waiting.'],
+          ],
+        },
       },
       {
-        key: 'C', label: 'Let PresenceAI prioritise', detail: 'The AI sorts the cases and suggests a status for each.',
-        consequence: (c) => ({
-          title: 'The AI did the work. Did you still decide?',
+        key: 'C', label: 'Let PresenceAI handle the queue', detail: 'The AI ranks open cases and adds a suggestion.',
+        consequence: (c) => milanOpenAfterS1(c) ? {
+          title: 'The AI labels Milan before any human looks',
           points: [
-            ['plus', 'PresenceAI suggests <b>Late</b> for Sara and Daan (they came in after 09:00). You accept both with one click.'],
-            ['minus', 'You didn’t actually look. The log still says “verified by teacher”.'],
-            milanOpenAfterS1(c)
-              ? ['minus', 'Milan is ranked last, with the hint <b>“likely not present”</b>.']
-              : ['minus', 'If a suggestion is wrong, nobody will ever notice.'],
-            ['info', 'Automation bias: a suggestion quietly becomes a decision.'],
+            ['minus', 'PresenceAI adds the hint <b>“likely not present”</b> to Milan’s case (41% match).'],
+            ['minus', 'You see the hint in passing and keep teaching: it quietly shapes how the case looks.'],
+            ['info', 'Automation bias: a suggestion starts to feel like a decision.'],
           ],
-        }),
+        } : {
+          title: 'Nothing to prioritise, for now',
+          points: [
+            ['plus', 'The queue is empty.'],
+            ['info', 'But a system that ranks cases can also start steering decisions.'],
+          ],
+        },
       },
     ],
   },
@@ -218,7 +232,7 @@ const STEPS = [
       const open = openBeforeS3(c);
       return `
         <p>In 2 minutes, at <strong>10:30</strong>, the attendance list is sent to the Education Office automatically. After that, teacher editing is locked: unresolved cases stay Uncertain and go to Education Office follow-up.</p>
-        <p>Camera 2 is back online. <strong>Noor</strong> is in the room, but her entry wasn’t processed, so her arrival time is unknown.</p>
+        <p>A separate technical problem: camera 2 was temporarily offline. <strong>Noor</strong> is in the room, but her entry was not processed, so her arrival time is unknown.</p>
         <div class="callout">Still Uncertain: <b>${listNames(open)}</b></div>`;
     },
     question: 'What happens to the unresolved registrations?',
@@ -390,8 +404,8 @@ const STEPS = [
           title: 'Boundary kept, process redesigned',
           tone: 'good',
           points: [
-            ['plus', 'A review window after class, instead of during it.'],
-            ['plus', 'An Education Office team owns unresolved cases (within 48 hours).'],
+            ['plus', 'A clear hand-off: after 10:30, unresolved cases move to an Education Office team that resolves them within 48 hours.'],
+            ['plus', 'The student is notified and can respond; the teacher does not need to reopen the attendance list.'],
             ['plus', 'An alternative check-in (student card / QR) for anyone the camera can’t see.'],
             ['minus', 'The roll-out is delayed by a semester and costs extra.'],
             ['info', 'Human control is designed into the organisation, not left to the teacher.'],
@@ -464,7 +478,7 @@ const REFLECTION = {
   },
   change: {
     title: 'What should change',
-    items: ['Unresolved cases get an organisational owner, not just the teacher', 'Review window after class, not during it', 'A clear escalation and fallback process with deadlines', 'No AI hints like “likely not present”'],
+    items: ['Unresolved cases get an organisational owner, not just the teacher', 'After 10:30, unresolved cases move to the Education Office; the teacher does not reopen the list', 'A clear escalation and fallback process with deadlines', 'No AI hints like “likely not present”'],
   },
   cond: {
     title: 'Conditions for responsible use',
@@ -475,9 +489,9 @@ const REFLECTION = {
 const REDESIGN_FLOW = [
   { cls: 's-ok', title: 'Confident match', text: 'Present / Late registered automatically' },
   { cls: 's-unc', title: 'Not confident', text: 'Uncertain, visible; attendance % frozen' },
-  { cls: '', title: 'Teacher window', text: 'Optional review up to 1 hour after class' },
-  { cls: '', title: 'Education Office', text: 'Case owner resolves within 48 hours' },
-  { cls: '', title: 'Student', text: 'Notified, with an alternative check-in' },
+  { cls: '', title: 'Teacher, until 10:30', text: 'Optional review in class; list sent at 10:30' },
+  { cls: '', title: 'Education Office', text: 'After 10:30: follows up; teacher does not reopen the list' },
+  { cls: '', title: 'Student', text: 'Notified and can respond, with an alternative check-in' },
   { cls: 's-ok', title: 'Verified status', text: 'Only a human decision changes the record' },
 ];
 
@@ -517,25 +531,18 @@ function rosterAt(stageNo, c) {
     emma:  stageNo >= 2 ? S('late', '09:14') : S('pending'),
     zoe:   stageNo >= 2 ? S('late', '09:17') : S('pending'),
     milan: S('uncertain', '08:59', 'Hood + new glasses · match 41%'),
-    sara:  stageNo >= 2 ? S('uncertain', '09:21', 'Face mask · match 81%') : S('pending'),
-    daan:  stageNo >= 2 ? S('uncertain', '09:23', 'Low light, back door · match 78%') : S('pending'),
+    sara:  stageNo >= 2 ? S('late', '09:21') : S('pending'),
+    daan:  stageNo >= 2 ? S('late', '09:23') : S('pending'),
     noor:  stageNo >= 3 ? S('uncertain', '?', 'Camera 2 offline at entry · time unknown') : S('pending'),
   };
 
   // Stage 1 — review Milan immediately
   if (c.s1 === 'A') R.milan = S(arrivalStatus('08:59'), '08:59', 'Verified by teacher · 09:01', 'verified');
 
-  // Stage 2 — growing queue
-  if (stageNo >= 2 && c.s2) {
-    const open = ['milan', 'sara', 'daan'].filter((id) => R[id].status === 'uncertain');
-    if (c.s2 === 'A') {
-      open.forEach((id) => { R[id] = S(arrivalStatus(R[id].time), R[id].time, 'Verified by teacher · 09:31', 'verified'); });
-    }
-    if (c.s2 === 'C') {
-      R.sara = S('late', '09:21', 'AI suggestion accepted · 1 click', 'ai');
-      R.daan = S('late', '09:23', 'AI suggestion accepted · 1 click', 'ai');
-      if (R.milan.status === 'uncertain') R.milan.note = 'AI hint: “likely not present” · 41%';
-    }
+  // Stage 2 — classroom pressure (only Milan can still be open)
+  if (stageNo >= 2 && c.s2 && R.milan.status === 'uncertain') {
+    if (c.s2 === 'A') R.milan = S(arrivalStatus('08:59'), '08:59', 'Verified by teacher · 09:26', 'verified');
+    if (c.s2 === 'C') R.milan.note = 'AI hint: “likely not present” · 41%';
   }
 
   // Stage 3 — deadline
@@ -563,7 +570,6 @@ function listNames(ids) {
 }
 
 const milanOpenAfterS1 = (c) => c.s1 !== 'A';
-const stage2OpenCount = (c) => 2 + (milanOpenAfterS1(c) ? 1 : 0);
 
 /* Uncertain students at the start of stage 3 (before the stage-3 choice). */
 function openBeforeS3(c) {
@@ -621,7 +627,7 @@ function impactCards(c) {
           ['minus', 'The record is complete, and wrong.'],
           ['minus', 'The doubt (41% match, camera outage) is erased from the official record.'],
           ['minus', 'The error spreads to study progress, study advice and grant reporting.'],
-          ...(c.s2 === 'C' ? [['minus', 'Sara and Daan: AI suggestions logged as “human verified”.']] : []),
+          ...(c.s2 === 'C' && milanOpenAfterS1(c) ? [['minus', 'An AI hint (“likely not present”) was attached to Milan before any human check.']] : []),
         ],
       },
       org: {
@@ -647,7 +653,7 @@ function impactCards(c) {
       points: [
         ['plus', `${n} registration${n === 1 ? '' : 's'} sent as Uncertain. The doubt stays visible.`],
         ['plus', 'No biometric doubt was turned into an official status.'],
-        ...(c.s2 === 'C' ? [['minus', 'Sara and Daan: AI suggestions logged as “human verified”.']] : []),
+        ...(c.s2 === 'C' && milanOpenAfterS1(c) ? [['minus', 'An AI hint (“likely not present”) was attached to Milan before any human check.']] : []),
         ...(rushed ? [['minus', 'Several reviews in under a minute: verification on paper only.']] : []),
         ['minus', 'Camera 2 outage: the hardware creates human work.'],
       ],
@@ -710,7 +716,7 @@ function render() {
   if (lastToastStep !== step.id) {
     lastToastStep = step.id;
     $('#toasts').innerHTML = '';
-    (step.toasts || []).forEach((t, i) => setTimeout(() => toast(t), 450 + i * 700));
+    (val(step.toasts, c) || []).forEach((t, i) => setTimeout(() => toast(t), 450 + i * 700));
   }
 
   updateControls();
