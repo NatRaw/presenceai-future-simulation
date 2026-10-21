@@ -1,0 +1,30 @@
+# Secrets: never commit API credentials
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Python
+.venv/
+**/.venv/
+__pycache__/
+*.pyc
+
+# Video generation: working folders, finished film, masters and reference images stay local
+video-generation/output/
+video-generation/output_wan/
+video-generation/output_seedance/
+video-generation/Finished film simulation/
+video-generation/references/
+*.part
+
+# Media files (generated videos, ProRes/MOV masters, music, voice-overs) never go to git
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.m4a
+
+# Editor / OS
+.vscode/
+.DS_Store
