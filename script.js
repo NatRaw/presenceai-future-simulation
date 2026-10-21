@@ -748,7 +748,7 @@ function render() {
   if (step.type === 'intro') html = renderIntro();
   if (step.type === 'stage') html = renderStage(step, c);
   if (step.type === 'boundary') html = renderBoundary(c);
-  if (step.type === 'elsa') html = renderElsa();
+  if (step.type === 'elsa') html = renderElsa(c);
   if (step.type === 'reflection') html = renderReflection(c);
   stageEl.innerHTML = html;
 
@@ -1007,7 +1007,17 @@ function renderBoundary(c) {
 }
 
 /* ---------- ELSA ---------- */
-function renderElsa() {
+/* One path-dependent sentence under the (standard) ELSA analysis. */
+function elsaPathNote(c) {
+  if (c.s3 === 'C' && c.s5 === 'A') return ['risk', 'Your path increased the ethical and social risk twice: uncertainty became an official negative status in class, and then as policy for everyone.'];
+  if (c.s5 === 'A') return ['risk', 'Your path increased the ethical and social risk because, as policy, uncertainty becomes an official negative status.'];
+  if (c.s3 === 'C') return ['risk', 'Your path increased the ethical and social risk because, in class, uncertainty became an official negative status.'];
+  if (c.s2 === 'C') return ['kept', 'On your path, uncertainty remained visible and human review was preserved, although the AI hint added a risk of overreliance.'];
+  return ['kept', 'On your path, uncertainty remained visible and human review was preserved, so no student received a negative status without verification.'];
+}
+
+function renderElsa(c) {
+  const [tone, note] = elsaPathNote(c);
   const col = (e) => `
     <article class="card elsa-col ${e.cls}">
       <div class="elsa-letter"><i>${e.letter}</i>${e.title}</div>
@@ -1019,10 +1029,11 @@ function renderElsa() {
 
   return `
     <div class="layout layout-wide">
-      <section class="panel report">
+      <section class="panel report compact">
         <span class="kicker k-result">ELSA analysis</span>
         <h1>Ethical · Legal · Social · Technological impact</h1>
         <div class="four-col">${ELSA.map(col).join('')}</div>
+        <p class="elsa-path ${tone}">${note}</p>
       </section>
     </div>`;
 }

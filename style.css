@@ -699,6 +699,8 @@ button { font: inherit; color: inherit; }
   background: var(--c); color: #fff; font-size: 1.1rem;
 }
 .elsa-col .pt { font-size: .86rem; }
+.elsa-path { margin: 0; padding: .4rem .8rem; border-left: 4px solid var(--present); border-radius: var(--radius-sm); background: var(--surface-2); font-size: .88rem; font-weight: 600; }
+.elsa-path.risk { border-left-color: var(--warn); }
 .elsa-sub { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
 
 /* Reflection */
@@ -913,6 +915,7 @@ button { font: inherit; color: inherit; }
 .report.compact .card { padding: .75rem .95rem; }
 .report.compact .flow-step { padding: .45rem .6rem; }
 .report.compact .never { padding: .4rem .9rem; }
+.report.compact .elsa-col { gap: .35rem; }
 
 /* ---------- Opening screen + intro film ---------- */
 .intro-overlay {
