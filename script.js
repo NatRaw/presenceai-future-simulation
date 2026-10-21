@@ -810,6 +810,17 @@ function renderRoster(stageNo, c) {
   const counter = (k, label) =>
     `<div class="counter ${k} ${prevCounts[k] !== undefined && prevCounts[k] !== counts[k] ? 'bump' : ''}"><b>${counts[k]}</b><span>${label}</span></div>`;
 
+  // Uncertain is NOT an official attendance total (as in the DP4 prototype): it is shown
+  // separately until a human verifies it, so the system never classifies the student itself.
+  const n = counts.uncertain;
+  const unresolved = n > 0
+    ? `<div class="unresolved ${prevCounts.uncertain !== undefined && prevCounts.uncertain !== n ? 'bump' : ''}">
+         <span class="unresolved-icon" aria-hidden="true">!</span>
+         <span><b>${n} registration${n === 1 ? '' : 's'}</b> need${n === 1 ? 's' : ''} review</span>
+         <span class="unresolved-note">not counted as present, late or absent</span>
+       </div>`
+    : '';
+
   const sent = stageNo >= 3 && c.s3;
   return `
     <aside class="panel attendance">
@@ -818,8 +829,9 @@ function renderRoster(stageNo, c) {
         <span class="live-dot ${sent ? 'sent-badge' : ''}">${sent ? 'Sent 10:30' : 'Live'}</span>
       </div>
       <div class="counters">
-        ${counter('present', 'Present')}${counter('late', 'Late')}${counter('uncertain', 'Uncertain')}${counter('absent', 'Absent')}
+        ${counter('present', 'Present')}${counter('late', 'Late')}${counter('absent', 'Absent')}
       </div>
+      ${unresolved}
       <div class="roster">${rows}</div>
     </aside>`;
 }

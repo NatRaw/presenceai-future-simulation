@@ -268,10 +268,35 @@ button { font: inherit; color: inherit; }
 
 .counters {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);   /* the three official totals only */
   gap: .5rem;
   padding: 0 1rem .7rem;
 }
+/* Unresolved registrations: shown separately, never as a fourth attendance total */
+.unresolved {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .25rem .55rem;
+  margin: 0 1rem .7rem;
+  padding: .5rem .75rem;
+  border-radius: var(--radius-sm);
+  background: var(--uncertain-bg);
+  box-shadow: inset 0 0 0 1px var(--uncertain-line);
+  color: var(--uncertain);
+  font-size: .85rem;
+}
+.unresolved b { color: var(--ink); }
+.unresolved-icon {
+  width: 1.2rem; height: 1.2rem;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: .75rem; font-weight: 800;
+  color: var(--review);
+  background: var(--review-bg);
+  box-shadow: inset 0 0 0 1px var(--review-line);
+}
+.unresolved-note { font-size: .72rem; color: var(--muted); margin-left: auto; }
 .counter {
   border-radius: var(--radius-sm);
   padding: .45rem .6rem;
@@ -283,9 +308,7 @@ button { font: inherit; color: inherit; }
 .counter.present b { color: var(--present); }
 .counter.late b { color: var(--late); }
 .counter.absent b { color: var(--absent); }
-.counter.uncertain { background: var(--uncertain-bg); border-color: var(--uncertain-line); }
-.counter.uncertain b { color: var(--uncertain); }
-.counter.bump { animation: bump .5s ease; }
+.counter.bump, .unresolved.bump { animation: bump .5s ease; }
 @keyframes bump { 40% { transform: scale(1.08); } }
 
 .roster { border-top: 1px solid var(--line); flex: 1; }
