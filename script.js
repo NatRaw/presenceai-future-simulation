@@ -14,6 +14,15 @@
    1. SCENARIO CONTENT
    ========================================================== */
 
+/* Opening screen + intro film. The film already ends on the central question on screen. */
+const INTRO = {
+  filmSrc: 'assets/presenceai-film.mp4',
+  holdMs: 1500,          // hold on the film's final frame (the question) before fading
+  fadeMs: 900,           // fade from the film into the simulation
+  startStep: 's1',       // the film leads straight into Stage 1
+  fullscreenOnStart: true,
+};
+
 const COURSE = {
   name: 'UXRI · Interaction Design',
   group: 'Class 3B',
@@ -719,7 +728,7 @@ function renderIntro() {
   return `
     <div class="layout layout-wide">
       <section class="panel report">
-        <h1>What happens when human control exists,<br>but nobody has time to use it?</h1>
+        <h1>What happens when human control exists,<br>but cannot be used in time?</h1>
         <p class="lead">It’s 2045. At this university, <b>PresenceAI</b> registers attendance automatically with facial recognition as students walk into the classroom.</p>
         <div class="intro-grid">
           <div class="facts">
@@ -1130,6 +1139,44 @@ function toggleFullscreen() {
   else document.exitFullscreen?.();
 }
 
+/* ---------- Opening screen + intro film ---------- */
+let introActive = true;   // while true, the simulation's keyboard shortcuts are disabled
+
+function startExperience() {
+  if (INTRO.fullscreenOnStart) document.documentElement.requestFullscreen?.().catch(() => {});
+  $('#opening').hidden = true;
+  const film = $('#introFilm');
+  $('#filmOverlay').hidden = false;
+  film.src = INTRO.filmSrc;
+  film.play().catch(() => { $('#btnPlayFilm').hidden = false; });   // fallback if the browser still blocks it
+}
+
+function endIntro() {
+  if (!introActive) return;
+  introActive = false;
+  const film = $('#introFilm');
+  state.step = STEPS.findIndex((s) => s.id === INTRO.startStep);
+  render();                                     // Stage 1 is ready underneath the film
+  const overlay = $('#filmOverlay');
+  overlay.classList.add('fade-out');
+  setTimeout(() => {
+    film.pause();
+    film.removeAttribute('src');                // stop loading/playing completely
+    film.load();
+    overlay.hidden = true;
+    overlay.classList.remove('fade-out');
+  }, INTRO.fadeMs);
+}
+
+$('#btnStartExperience').addEventListener('click', startExperience);
+$('#btnSkipIntro').addEventListener('click', endIntro);
+$('#btnPlayFilm').addEventListener('click', () => {
+  $('#btnPlayFilm').hidden = true;
+  $('#introFilm').play().catch(endIntro);
+});
+$('#introFilm').addEventListener('ended', () => setTimeout(endIntro, INTRO.holdMs));   // hold on the question
+$('#introFilm').addEventListener('error', () => { if (!$('#filmOverlay').hidden) endIntro(); });
+
 /* ---------- Event wiring ---------- */
 $('#btnContinue').addEventListener('click', goNext);
 $('#btnBack').addEventListener('click', goBack);
@@ -1147,6 +1194,12 @@ stageEl.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (introActive) {
+    // Opening screen: Enter starts. During the film: Escape or S skips. Nothing else reaches the simulation.
+    if (!$('#opening').hidden && e.key === 'Enter') { e.preventDefault(); startExperience(); }
+    else if (!$('#filmOverlay').hidden && (e.key === 'Escape' || e.key.toUpperCase() === 'S')) endIntro();
+    return;
+  }
   if (modalOpen()) {
     if (e.key === 'Escape') closeModal();
     return;

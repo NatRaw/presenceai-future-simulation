@@ -25,6 +25,9 @@ video-generation/references/
 *.mp3
 *.m4a
 
+# Exception: the one web-ready copy of the finished film used by the website
+!assets/presenceai-film.mp4
+
 # Editor / OS
 .vscode/
 .DS_Store

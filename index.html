@@ -8,6 +8,30 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- ===== Opening screen: one click is needed so the film may play with sound ===== -->
+  <div class="intro-overlay opening" id="opening">
+    <div class="opening-card">
+      <svg class="opening-logo" viewBox="0 0 40 40" aria-hidden="true">
+        <rect width="40" height="40" rx="10" fill="var(--brand)"/>
+        <circle cx="20" cy="17" r="7" fill="none" stroke="#fff" stroke-width="2.6"/>
+        <path d="M9 32c2.6-4.4 6.4-6.4 11-6.4s8.4 2 11 6.4" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="31" cy="9" r="3.4" fill="#7ee2b8"/>
+      </svg>
+      <h1>PresenceAI</h1>
+      <p class="opening-kicker">Future Simulation · 2045</p>
+      <p class="opening-sub">An interactive future scenario</p>
+      <button class="btn btn-primary btn-large" id="btnStartExperience">Start simulation</button>
+      <p class="opening-hint">The intro film plays with sound</p>
+    </div>
+  </div>
+
+  <!-- ===== Intro film: plays once, then fades into Stage 1 ===== -->
+  <div class="intro-overlay film-overlay" id="filmOverlay" hidden>
+    <video id="introFilm" preload="auto" playsinline></video>
+    <button class="btn btn-play" id="btnPlayFilm" hidden>▶ Play film</button>
+    <button class="btn skip-btn" id="btnSkipIntro">Skip intro →</button>
+  </div>
+
   <div class="app">
 
     <!-- ===== Top bar: PresenceAI branding, course context, simulated clock ===== -->
