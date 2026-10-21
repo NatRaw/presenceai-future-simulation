@@ -121,6 +121,7 @@ const STEPS = [
       <p>His status: <span class="status uncertain">Uncertain</span>${REVIEW_BADGE}</p>
       <p>The lesson starts at 09:00. Three students are already at your desk with questions about the assignment.</p>`,
     question: 'What do you do?',
+    reflection: 'How should PresenceAI handle a registration that needs human review at the start of the lesson?',
     toasts: [{ tone: 'uncertain', title: '1 registration requires review', text: 'Milan de Vries · match 41%' }],
     choices: [
       {
@@ -163,6 +164,7 @@ const STEPS = [
         <p>You’re 24 minutes into the lesson and helping a group with their prototype. Another student asks for help, then another.</p>
         <div class="callout">Your dashboard shows <b>no open reviews</b>: you verified Milan at the start. Everyone else was recognised automatically.</div>`,
     question: 'How do you divide your attention?',
+    reflection: 'When is human control meaningful if it cannot be used in time?',
     toasts: (c) => milanOpenAfterS1(c)
       ? [{ tone: 'uncertain', title: 'Reminder: 1 registration still needs review', text: 'Milan de Vries · match 41%' }]
       : [],
@@ -236,6 +238,7 @@ const STEPS = [
         <div class="callout">Still Uncertain: <b>${listNames(open)}</b></div>`;
     },
     question: 'What happens to the unresolved registrations?',
+    reflection: 'Who should carry the cost of the system’s uncertainty: the teacher, the organisation or the student?',
     toasts: [
       { tone: 'warn', title: 'Attendance list sends at 10:30', text: 'Unresolved registrations will be included.' },
       { tone: 'uncertain', title: 'Camera 2 back online', text: '1 unprocessed entry: Noor El Amrani' },
@@ -311,6 +314,7 @@ const STEPS = [
       ? `${first(focusId(c))} is officially Absent`
       : `${first(focusId(c))}’s case is open, and honest`,
     impacts: (c) => impactCards(c),
+    reflection: 'Who should have to prove what really happened: the institution or the student?',
     question: (c) => {
       const ids = sentForFollowUp(c);
       const who = ids.length === 1 ? `${listNames(ids)}’s case is` : `the cases of ${listNames(ids)} are`;
@@ -377,6 +381,7 @@ const STEPS = [
         <b>Student perspective:</b> students may feel that the burden of correcting an AI error has shifted onto them.</div>
       <div class="quote">“To increase efficiency, automatically mark unresolved students absent after the lesson.”</div>`,
     question: 'The board asks for your decision.',
+    reflection: 'What should PresenceAI never be allowed to decide on its own?',
     toasts: [{ tone: 'org', title: 'Policy proposal · Faculty Board', text: 'Automatic absence for unresolved cases' }],
     choices: [
       {
@@ -794,7 +799,7 @@ function renderStage(step, c) {
       </span>
     </button>`).join('');
 
-  const consequence = chosen ? renderConsequence(step.choices.find((ch) => ch.key === chosen).consequence(c)) : '';
+  const consequence = chosen ? renderConsequence(step.choices.find((ch) => ch.key === chosen).consequence(c), val(step.reflection, c)) : '';
 
   // Stage 4 uses the full width for the three impact cards
   if (step.aside === 'none') {
@@ -840,7 +845,7 @@ function impactCard(cls, title, sub, data) {
     </article>`;
 }
 
-function renderConsequence(cons) {
+function renderConsequence(cons, reflection) {
   return `
     <section class="consequence ${cons.tone ? 'tone-' + cons.tone : ''}" id="consequence">
       ${cons.boundary ? `
@@ -851,6 +856,7 @@ function renderConsequence(cons) {
       <span class="kicker k-result">Consequence</span>
       <h3>${cons.title}</h3>
       <ul class="points">${cons.points.map(([t, x]) => `<li class="pt ${t}">${x}</li>`).join('')}</ul>
+      ${reflection ? `<p class="reflect-q"><span>Reflect</span>${reflection}</p>` : ''}
     </section>`;
 }
 
