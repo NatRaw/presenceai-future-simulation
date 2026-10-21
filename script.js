@@ -91,7 +91,7 @@ const PATH_LABELS = {
   s1: { A: 'Reviewed Milan immediately', B: 'Left Milan for later' },
   s2: { A: 'Paused lesson to review', B: 'Kept teaching', C: 'Let AI prioritise' },
   s3: { A: 'Reviewed at the deadline', B: 'Sent as Uncertain', C: 'Converted to Absent' },
-  s4: { A: 'Teacher follows up', B: 'Education Office follows up', C: 'Student follows up' },
+  s4: { A: 'Office asks teacher for a statement', B: 'Office investigates', C: 'Student submits proof' },
   s5: { A: 'Approved automatic absence', B: 'Kept Uncertain + fallback', C: 'Redesign before scaling' },
 };
 const RISKY_CHOICES = { s3: 'C', s5: 'A' };
@@ -217,7 +217,7 @@ const STEPS = [
     situation: (c) => {
       const open = openBeforeS3(c);
       return `
-        <p>At <strong>10:30</strong> the attendance list goes to the Education Office automatically.</p>
+        <p>In 2 minutes, at <strong>10:30</strong>, the attendance list is sent to the Education Office automatically. After that, teacher editing is locked: unresolved cases stay Uncertain and go to Education Office follow-up.</p>
         <p>Camera 2 is back online. <strong>Noor</strong> is in the room, but her entry wasn’t processed, so her arrival time is unknown.</p>
         <div class="callout">Still Uncertain: <b>${listNames(open)}</b></div>`;
     },
@@ -248,6 +248,14 @@ const STEPS = [
         key: 'B', label: 'Send them as “Uncertain”', detail: 'Unresolved stays unresolved. Nobody is marked absent.',
         consequence: (c) => {
           const n = openBeforeS3(c).length;
+          if (c.s3auto) return {
+            title: 'No decision before 10:30: the list was sent automatically',
+            points: [
+              ['info', 'At 10:30 PresenceAI submitted the list and locked teacher editing.'],
+              ['plus', `${n} case${n === 1 ? '' : 's'} stay${n === 1 ? 's' : ''} Uncertain. Nobody is marked absent and no attendance percentage changes.`],
+              ['minus', 'You can no longer resolve them yourself: they go to Education Office follow-up.'],
+            ],
+          };
           return {
             title: 'Sent honestly, but not finished',
             tone: 'good',
@@ -289,24 +297,24 @@ const STEPS = [
       ? `${first(focusId(c))} is officially Absent`
       : `${first(focusId(c))}’s case is open, and honest`,
     impacts: (c) => impactCards(c),
-    question: (c) => `${first(focusId(c))}’s case needs follow-up. Who handles it?`,
+    question: (c) => `Teacher editing is locked since 10:30, so ${first(focusId(c))}’s case is now with the Education Office. How should they follow it up?`,
     toasts: [{ tone: 'org', title: 'Attendance list sent · 10:30', text: 'Delivered to the Education Office.' }],
     choices: [
       {
-        key: 'A', label: 'The teacher', detail: 'Ask the teacher to resolve it after class.',
+        key: 'A', label: 'Ask the teacher for a statement', detail: 'The Office asks what the teacher remembers, then decides itself.',
         consequence: () => ({
-          title: 'The person with context has no time',
+          title: 'Context from the teacher, decision by the Office',
           points: [
-            ['plus', 'You know the class, so you might remember.'],
-            ['minus', 'Three days later you decide from memory, between two other lessons.'],
-            ['info', 'Human control again depends on one overloaded person.'],
+            ['plus', 'The teacher was there and might remember.'],
+            ['minus', 'Days later, the teacher answers from memory between two other lessons.'],
+            ['info', 'Human verification still leans on one overloaded person.'],
           ],
         }),
       },
       {
-        key: 'B', label: 'The Education Office', detail: 'Administration owns the case and investigates.',
+        key: 'B', label: 'Investigate the case', detail: 'The Office checks other evidence and contacts teacher and student.',
         consequence: () => ({
-          title: 'Clear ownership, but no context',
+          title: 'Careful review, but slow and costly',
           points: [
             ['plus', 'A dedicated process with time and a deadline.'],
             ['minus', 'Admin still has to contact the teacher and the student: ~20 minutes per case.'],
@@ -315,7 +323,7 @@ const STEPS = [
         }),
       },
       {
-        key: 'C', label: 'The student', detail: (c) => `${first(focusId(c))} submits proof via self-service.`,
+        key: 'C', label: 'Ask the student for proof', detail: (c) => `${first(focusId(c))} submits proof via self-service; the Office checks it.`,
         consequence: (c) => ({
           title: 'Fast, but the burden shifts to the student',
           points: [
@@ -340,7 +348,7 @@ const STEPS = [
       <span class="sim-label">Simulated scenario data · 2045</span>
       <p>PresenceAI now runs in <strong>120 classrooms</strong>. Every week <strong>340 registrations</strong> end up Uncertain. The Education Office can’t keep up.</p>
       <div class="callout c-org">${{
-        A: 'Teachers complain: resolving cases after class eats their preparation time.',
+        A: 'Teachers complain: answering the Education Office’s statement requests eats their preparation time.',
         B: 'The Education Office says it needs 1.5 extra staff (FTE) to handle the queue.',
         C: 'Student claims are piling up, and some look suspicious.',
       }[c.s4] || ''}</div>
@@ -647,7 +655,7 @@ function impactCards(c) {
     org: {
       points: [
         ['plus', `The Education Office receives ${n} open case${n === 1 ? '' : 's'} and can investigate.`],
-        ['minus', 'There is no clear case owner and no deadline yet.'],
+        ['minus', 'The Education Office owns the case, but there is no procedure or deadline yet.'],
         ['info', 'Across the faculty: ~340 uncertain cases a week.'],
       ],
     },
@@ -734,7 +742,7 @@ function renderIntro() {
           <div class="facts">
             <div class="fact"><span class="fact-num">1</span><span>Recognised students are registered as <b>Present</b> or <b>Late</b> automatically.</span></div>
             <div class="fact"><span class="fact-num">2</span><span>If the AI isn’t sure, it shows <b>Uncertain – Review required</b>. It must never mark the student absent by itself.</span></div>
-            <div class="fact"><span class="fact-num">3</span><span>At <b>10:30</b> the list is sent to the Education Office automatically. Unresolved cases stay Uncertain, and the student gets a notification.</span></div>
+            <div class="fact"><span class="fact-num">3</span><span>At <b>10:30</b> the list is sent to the Education Office automatically and teacher editing is locked. Unresolved cases stay Uncertain, go to Education Office follow-up, and the student gets a notification.</span></div>
           </div>
           <div class="facts">
             <div class="role-card">Your role: you are the teacher of ${COURSE.group}. You teach, answer questions <i>and</i> review registrations.</div>
@@ -986,7 +994,8 @@ function renderReflection(c) {
 
   const path = Object.keys(PATH_LABELS).map((k, i) => {
     const risky = RISKY_CHOICES[k] && RISKY_CHOICES[k] === c[k];
-    return `<span class="path-chip ${risky ? 'risk' : ''}"><b>${i + 1}${c[k] || '–'}</b> ${PATH_LABELS[k][c[k]] || 'Not chosen'}</span>`;
+    const label = k === 's3' && c.s3auto ? 'No decision before 10:30 (sent automatically)' : (PATH_LABELS[k][c[k]] || 'Not chosen');
+    return `<span class="path-chip ${risky ? 'risk' : ''}"><b>${i + 1}${c[k] || '–'}</b> ${label}</span>`;
   }).join('');
 
   return `
@@ -1035,9 +1044,8 @@ function startCountdown() {
     el.textContent = `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
     $('#clock').textContent = left > 60 ? '10:28' : left > 0 ? '10:29' : '10:30';
     if (left === 0) {
-      $('#countdown').classList.add('expired');
-      $('#countdown').innerHTML = 'Deadline reached. <b>Waiting for your decision</b>';
       clearInterval(countdownTimer);
+      autoSubmitAt1030();
     }
   };
   tick();
@@ -1045,8 +1053,20 @@ function startCountdown() {
 }
 function markCountdownDone() {
   const el = $('#countdown');
-  if (el) el.innerHTML = 'Decision made · list sent at <b>10:30</b>';
+  if (el) el.innerHTML = state.choices.s3auto
+    ? 'List sent automatically at <b>10:30</b> · teacher editing locked'
+    : 'Decision made · list sent at <b>10:30</b> · teacher editing locked';
   $('#clock').textContent = '10:30';
+}
+
+/* 10:30 reached without a decision: PresenceAI submits the list itself and locks teacher editing.
+   Unresolved registrations stay Uncertain and go to the Education Office (same outcome as option B). */
+function autoSubmitAt1030() {
+  if (currentStep().id !== 's3' || state.choices.s3) return;
+  state.choices.s3 = 'B';
+  state.choices.s3auto = true;
+  render();
+  toast({ tone: 'org', title: 'Attendance list sent automatically · 10:30', text: 'Teacher editing locked. Unresolved cases go to the Education Office.' });
 }
 
 
@@ -1060,6 +1080,7 @@ function needsChoice(step) { return step.type === 'stage' && !state.choices[step
 /* Clear a stage's choice and all later ones (they depend on it). */
 function clearFrom(stageNo) {
   STEPS.forEach((s) => { if (s.stageNo >= stageNo) delete state.choices[s.id]; });
+  if (stageNo <= 3) delete state.choices.s3auto;
 }
 
 function choose(key) {
